@@ -39,6 +39,7 @@
 #include <torch/csrc/jit/passes/tensorexpr_fuser.h>
 #include <torch/csrc/jit/runtime/graph_executor.h>
 #include <torch/script.h>  // One-stop header for TorchScript
+#include <ATen/Parallel.h>
 #pragma warning(pop)
 #pragma GCC diagnostic pop
 
@@ -62,5 +63,9 @@ TRITONSERVER_Error* ConvertCUDAStatusToTritonError(
 TRITONSERVER_Error* ParseParameter(
     triton::common::TritonJson::Value& params, const std::string& mkey,
     bool* value);
+
+TRITONSERVER_Error* ParseParameter(
+    triton::common::TritonJson::Value& params, const std::string& mkey,
+    int* value);
 
 }}}  // namespace triton::backend::pytorch

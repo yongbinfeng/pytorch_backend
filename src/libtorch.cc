@@ -136,6 +136,10 @@ class ModelState : public BackendModel {
   // Defaults to (false, false).
   std::pair<bool, bool> enable_nvfuser_pair_;
 
+  int num_intra_threads_;
+  int num_inter_threads_;
+  bool use_per_session_threads_;
+
   // Model mapping for shared TorchScript model across all instances on the
   // same device. The key is a pair of isGPU and device index.
   std::map<
@@ -180,7 +184,9 @@ ModelState::ModelState(TRITONBACKEND_Model* triton_model)
       enable_weight_sharing_(false), enable_tensor_fuser_pair_({false, true}),
       enable_jit_profiling_pair_({false, true}),
       enable_jit_executor_pair_({false, true}),
-      enable_nvfuser_pair_({false, false})
+      enable_nvfuser_pair_({false, false}),
+      num_intra_threads_(0), num_inter_threads_(0),
+      use_per_session_threads_(false)
 {
   output_names_.clear();
 
@@ -454,6 +460,49 @@ ModelState::ParseParameters()
                                   " for model instance '" + Name() + "'")
                                      .c_str());
     }
+
+    err = ParseParameter(params, "Torch_NUM_INTRA_THREADS", &num_intra_threads_);
+    if (err != nullptr) {
+      if (TRITONSERVER_ErrorCode(err) != TRITONSERVER_ERROR_NOT_FOUND) {
+        return err;
+      } else {
+        TRITONSERVER_ErrorDelete(err);
+      }
+    } else if (num_intra_threads_ < 0) {
+      return TRITONSERVER_ErrorNew(
+          TRITONSERVER_ERROR_INVALID_ARG,
+          (std::string("parameter 'Torch_NUM_INTRA_THREADS' must be non-negative "
+                       "number for TensorFlow model '") +
+           Name() + "'")
+              .c_str());
+    }
+
+    err = ParseParameter(params, "Torch_NUM_INTER_THREADS", &num_inter_threads_);
+    if (err != nullptr) {
+      if (TRITONSERVER_ErrorCode(err) != TRITONSERVER_ERROR_NOT_FOUND) {
+        return err;
+      } else {
+        TRITONSERVER_ErrorDelete(err);
+      }
+    } else if (num_inter_threads_ < 0) {
+      return TRITONSERVER_ErrorNew(
+          TRITONSERVER_ERROR_INVALID_ARG,
+          (std::string("parameter 'Torch_NUM_INTER_THREADS' must be non-negative "
+                       "number for TensorFlow model '") +
+           Name() + "'")
+              .c_str());
+    }
+
+    err = ParseParameter(
+        params, "Torch_USE_PER_SESSION_THREADS", &use_per_session_threads_);
+    if (err != nullptr) {
+      if (TRITONSERVER_ErrorCode(err) != TRITONSERVER_ERROR_NOT_FOUND) {
+        return err;
+      } else {
+        TRITONSERVER_ErrorDelete(err);
+      }
+    }
+
   }
 
   return nullptr;
@@ -1008,6 +1057,9 @@ ModelInstanceState::ProcessRequests(
 #endif
   }
 
+  at::set_num_interop_threads(1);
+  at::set_num_threads(1);
+
   NVTX_RANGE(nvtx_, "ProcessRequests " + Name());
 
   uint64_t exec_start_ns = 0;
@@ -1274,6 +1326,9 @@ ModelInstanceState::Execute(
     std::vector<torch::jit::IValue>* output_tensors)
 {
   NVTX_RANGE(nvtx_, "Execute " + Name());
+
+  //torch::set_num_interop_threads(num_inter_threads_);
+  //torch::set_num_threads(num_intra_threads_);
 
   torch::jit::IValue model_outputs_;
 
