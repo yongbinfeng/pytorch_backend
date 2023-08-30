@@ -107,6 +107,9 @@ class ModelState : public BackendModel {
   bool EnabledWeightSharing() { return enable_weight_sharing_; }
   const std::vector<std::string>& ModelOutputs() { return output_names_; }
 
+  int IntraOpThreadCount() { return intra_op_thread_count_; }
+  int InterOpThreadCount() { return inter_op_thread_count_; }
+
  private:
   ModelState(TRITONBACKEND_Model* triton_model);
   TRITONSERVER_Error* AutoCompleteConfig();
@@ -144,6 +147,9 @@ class ModelState : public BackendModel {
   std::map<
       std::pair<bool, int64_t>, std::shared_ptr<torch::jit::script::Module>>
       torch_models_;
+
+  int intra_op_thread_count_;
+  int inter_op_thread_count_;
 
   // List of all the outputs specified in the output section of model
   // configuration.
@@ -201,12 +207,6 @@ ModelState::ModelState(TRITONBACKEND_Model* triton_model)
         io.MemberAsString("name", &io_name, &io_name_len));
     output_names_.emplace_back(io_name);
   }
-
-  // put thread controls to the ModelState
-  // similar to ONNX backend
-  // https://github.com/triton-inference-server/onnxruntime_backend/blob/5183b788d29ff17f891fffea50fc808d3960ceab/src/onnxruntime.cc#L267-L301
-  at::set_num_interop_threads(1);
-  at::set_num_threads(1);
 }
 
 TRITONSERVER_Error*
@@ -462,6 +462,46 @@ ModelState::ParseParameters()
                                   (enable_nvfuser ? "enabled" : "disabled") +
                                   " for model instance '" + Name() + "'")
                                      .c_str());
+    }
+
+    // intra_op_thread_count 
+    int intra_op_thread_count = 0;
+    err = ParseParameterInt(params, "INTRA_OP_THREAD_COUNT", &intra_op_thread_count);
+    if (err != nullptr) {
+      if (TRITONSERVER_ErrorCode(err) != TRITONSERVER_ERROR_NOT_FOUND) {
+        return err;
+      } else {
+        TRITONSERVER_ErrorDelete(err);
+      }
+    } else {
+      intra_op_thread_count_ = intra_op_thread_count;
+      LOG_MESSAGE(
+          TRITONSERVER_LOG_INFO,
+          (std::string("Intra op thread count is ") +
+           std::to_string(intra_op_thread_count) +
+           " for model instance '" + Name() + "'")
+              .c_str());
+      at::set_num_threads(intra_op_thread_count);
+    }
+
+    // inter_op_thread_count
+    int inter_op_thread_count = 0;
+    err = ParseParameterInt(params, "INTER_OP_THREAD_COUNT", &inter_op_thread_count);
+    if (err != nullptr) {
+      if (TRITONSERVER_ErrorCode(err) != TRITONSERVER_ERROR_NOT_FOUND) {
+        return err;
+      } else {
+        TRITONSERVER_ErrorDelete(err);
+      }
+    } else {
+      inter_op_thread_count_ = inter_op_thread_count;
+      LOG_MESSAGE(
+          TRITONSERVER_LOG_INFO,
+          (std::string("Inter op thread count is ") +
+           std::to_string(inter_op_thread_count) +
+           " for model instance '" + Name() + "'")
+              .c_str());
+      at::set_num_interop_threads(inter_op_thread_count);
     }
   }
 
