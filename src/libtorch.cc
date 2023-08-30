@@ -36,6 +36,9 @@
 #include "triton/common/nvtx.h"
 #include "triton/core/tritonbackend.h"
 
+// for thread controls
+#include <ATen/Parallel.h>
+
 #ifdef TRITON_PYTORCH_ENABLE_TORCHVISION
 // Suppress warnings in torch headers
 #pragma GCC diagnostic push
@@ -198,6 +201,12 @@ ModelState::ModelState(TRITONBACKEND_Model* triton_model)
         io.MemberAsString("name", &io_name, &io_name_len));
     output_names_.emplace_back(io_name);
   }
+
+  // put thread controls to the ModelState
+  // similar to ONNX backend
+  // https://github.com/triton-inference-server/onnxruntime_backend/blob/5183b788d29ff17f891fffea50fc808d3960ceab/src/onnxruntime.cc#L267-L301
+  at::set_num_interop_threads(1);
+  at::set_num_threads(1);
 }
 
 TRITONSERVER_Error*
