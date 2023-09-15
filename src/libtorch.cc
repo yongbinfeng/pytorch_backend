@@ -39,6 +39,8 @@
 // for thread controls
 #include <ATen/Parallel.h>
 
+#include <ATen/Context.h>
+
 #ifdef TRITON_PYTORCH_ENABLE_TORCHVISION
 // Suppress warnings in torch headers
 #pragma GCC diagnostic push
@@ -502,6 +504,25 @@ ModelState::ParseParameters()
            " for model instance '" + Name() + "'")
               .c_str());
       at::set_num_interop_threads(inter_op_thread_count);
+    }
+
+    // deterministic
+    bool doDeterministic = false;
+    err = ParseParameter(params, "DO_DETERMINISTIC", &doDeterministic);
+    if (err != nullptr) {
+      if (TRITONSERVER_ErrorCode(err) != TRITONSERVER_ERROR_NOT_FOUND) {
+        return err;
+      } else {
+        TRITONSERVER_ErrorDelete(err);
+      }
+    } else {
+      LOG_MESSAGE(
+          TRITONSERVER_LOG_INFO,
+          (std::string("Do DETERMINISTIC ") +
+           std::to_string(doDeterministic) +
+           " for model instance '" + Name() + "'")
+              .c_str());
+      at::globalContext().setDeterministicAlgorithms(doDeterministic,!doDeterministic);
     }
   }
 
