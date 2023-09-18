@@ -522,7 +522,18 @@ ModelState::ParseParameters()
            std::to_string(doDeterministic) +
            " for model instance '" + Name() + "'")
               .c_str());
+      srand(0);
+      LOG_MESSAGE(
+          TRITONSERVER_LOG_INFO,
+          (std::string("Setting seed to 0") +
+           std::to_string(doDeterministic) +
+           " for model instance '" + Name() + "'")
+              .c_str());
+      torch::manual_seed(0);
       at::globalContext().setDeterministicAlgorithms(doDeterministic,!doDeterministic);
+      #ifdef TRITON_ENABLE_GPU
+        at::globalContext().setDeterministicCuDNN(doDeterministic);
+      #endif
     }
   }
 
