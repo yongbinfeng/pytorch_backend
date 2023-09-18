@@ -25,7 +25,9 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <stdint.h>
+
 #include <exception>
+
 #include "libtorch_utils.h"
 #include "triton/backend/backend_common.h"
 #include "triton/backend/backend_input_collector.h"
@@ -37,9 +39,9 @@
 #include "triton/core/tritonbackend.h"
 
 // for thread controls
-#include <ATen/Parallel.h>
-
 #include <ATen/Context.h>
+#include <ATen/Parallel.h>
+#include <torch/cuda.h>
 
 #ifdef TRITON_PYTORCH_ENABLE_TORCHVISION
 // Suppress warnings in torch headers
@@ -466,9 +468,10 @@ ModelState::ParseParameters()
                                      .c_str());
     }
 
-    // intra_op_thread_count 
+    // intra_op_thread_count
     int intra_op_thread_count = 0;
-    err = ParseParameterInt(params, "INTRA_OP_THREAD_COUNT", &intra_op_thread_count);
+    err = ParseParameterInt(
+        params, "INTRA_OP_THREAD_COUNT", &intra_op_thread_count);
     if (err != nullptr) {
       if (TRITONSERVER_ErrorCode(err) != TRITONSERVER_ERROR_NOT_FOUND) {
         return err;
@@ -478,17 +481,17 @@ ModelState::ParseParameters()
     } else {
       intra_op_thread_count_ = intra_op_thread_count;
       LOG_MESSAGE(
-          TRITONSERVER_LOG_INFO,
-          (std::string("Intra op thread count is ") +
-           std::to_string(intra_op_thread_count) +
-           " for model instance '" + Name() + "'")
-              .c_str());
+          TRITONSERVER_LOG_INFO, (std::string("Intra op thread count is ") +
+                                  std::to_string(intra_op_thread_count) +
+                                  " for model instance '" + Name() + "'")
+                                     .c_str());
       at::set_num_threads(intra_op_thread_count);
     }
 
     // inter_op_thread_count
     int inter_op_thread_count = 0;
-    err = ParseParameterInt(params, "INTER_OP_THREAD_COUNT", &inter_op_thread_count);
+    err = ParseParameterInt(
+        params, "INTER_OP_THREAD_COUNT", &inter_op_thread_count);
     if (err != nullptr) {
       if (TRITONSERVER_ErrorCode(err) != TRITONSERVER_ERROR_NOT_FOUND) {
         return err;
@@ -498,11 +501,10 @@ ModelState::ParseParameters()
     } else {
       inter_op_thread_count_ = inter_op_thread_count;
       LOG_MESSAGE(
-          TRITONSERVER_LOG_INFO,
-          (std::string("Inter op thread count is ") +
-           std::to_string(inter_op_thread_count) +
-           " for model instance '" + Name() + "'")
-              .c_str());
+          TRITONSERVER_LOG_INFO, (std::string("Inter op thread count is ") +
+                                  std::to_string(inter_op_thread_count) +
+                                  " for model instance '" + Name() + "'")
+                                     .c_str());
       at::set_num_interop_threads(inter_op_thread_count);
     }
 
@@ -518,22 +520,25 @@ ModelState::ParseParameters()
     } else {
       LOG_MESSAGE(
           TRITONSERVER_LOG_INFO,
-          (std::string("Do DETERMINISTIC ") +
-           std::to_string(doDeterministic) +
+          (std::string("Do DETERMINISTIC ") + std::to_string(doDeterministic) +
            " for model instance '" + Name() + "'")
               .c_str());
-      srand(0);
+      // https://pytorch.org/docs/stable/notes/randomness.html
+      // https://discuss.pytorch.org/t/libtorch-sequential-model-is-not-consistent-with-pytorch-sequential-model/153556
+      // https://pytorch-geometric.readthedocs.io/en/latest/_modules/torch_geometric/seed.html
       LOG_MESSAGE(
-          TRITONSERVER_LOG_INFO,
-          (std::string("Setting seed to 0") +
-           std::to_string(doDeterministic) +
-           " for model instance '" + Name() + "'")
-              .c_str());
-      torch::manual_seed(0);
-      at::globalContext().setDeterministicAlgorithms(doDeterministic,!doDeterministic);
-      #ifdef TRITON_ENABLE_GPU
-        at::globalContext().setDeterministicCuDNN(doDeterministic);
-      #endif
+          TRITONSERVER_LOG_INFO, (std::string("Setting all seeds to 1234") +
+                                  " for model instance '" + Name() + "'")
+                                     .c_str());
+      srand(1234);
+      torch::manual_seed(1234);
+      torch::cuda::manual_seed_all(1234);
+      at::globalContext().setDeterministicAlgorithms(
+          doDeterministic, !doDeterministic);
+      // #ifdef TRITON_ENABLE_GPU
+      at::globalContext().setDeterministicCuDNN(doDeterministic);
+      at::globalContext().setBenchmarkCuDNN(!doDeterministic);
+      // #endif
     }
   }
 
@@ -1393,12 +1398,12 @@ ModelInstanceState::Execute(
         torch::jit::overrideCanFuseOnCPU(false);
         torch::jit::overrideCanFuseOnGPU(false);
         torch::jit::setTensorExprFuserEnabled(false);
-	torch::jit::fuser::cuda::setEnabled(true);
+        torch::jit::fuser::cuda::setEnabled(true);
       } else {
         torch::jit::overrideCanFuseOnCPU(true);
         torch::jit::overrideCanFuseOnGPU(true);
         torch::jit::setTensorExprFuserEnabled(true);
-	torch::jit::fuser::cuda::setEnabled(false);
+        torch::jit::fuser::cuda::setEnabled(false);
       }
     }
 
@@ -1842,9 +1847,9 @@ ModelInstanceState::SetInputTensors(
 
         batchn_shape[0] += GetElementCount(input_shape, input_dims_count);
       }
-    }
-    else {
-      batchn_shape = std::vector<int64_t>(input_shape, input_shape + input_dims_count);
+    } else {
+      batchn_shape =
+          std::vector<int64_t>(input_shape, input_shape + input_dims_count);
       if (supports_batching_) {
         batchn_shape[0] = total_batch_size;
       }
@@ -1853,8 +1858,8 @@ ModelInstanceState::SetInputTensors(
     // The input must be in contiguous CPU/GPU memory.
     std::vector<std::pair<TRITONSERVER_MemoryType, int64_t>> alloc_perference;
     if (device_.is_cpu()) {
-      alloc_perference = {{TRITONSERVER_MEMORY_CPU_PINNED, 0},
-                          {TRITONSERVER_MEMORY_CPU, 0}};
+      alloc_perference = {
+          {TRITONSERVER_MEMORY_CPU_PINNED, 0}, {TRITONSERVER_MEMORY_CPU, 0}};
     } else {
       alloc_perference = {{TRITONSERVER_MEMORY_GPU, device_.index()}};
     }
@@ -1968,9 +1973,11 @@ ModelInstanceState::ReadOutputTensors(
 
       // Output tensors may not reside on the same device as model
       torch::Device tensor_device = output_flat.device();
-      const auto memory_type = (tensor_device.type() == torch::kCPU) ? TRITONSERVER_MEMORY_CPU
-                                                  : TRITONSERVER_MEMORY_GPU;
-      const auto memory_id = (tensor_device.type() == torch::kCPU) ? 0 : tensor_device.index();
+      const auto memory_type = (tensor_device.type() == torch::kCPU)
+                                   ? TRITONSERVER_MEMORY_CPU
+                                   : TRITONSERVER_MEMORY_GPU;
+      const auto memory_id =
+          (tensor_device.type() == torch::kCPU) ? 0 : tensor_device.index();
 
       // Batch output doesn't support string data type yet, as it is not trivial
       // to parse string output
@@ -1987,16 +1994,16 @@ ModelInstanceState::ReadOutputTensors(
           return TRITONSERVER_ErrorNew(
               TRITONSERVER_ERROR_INVALID_ARG,
               (std::string("output '") + name +
-              "' is a scalar which is not supported.")
+               "' is a scalar which is not supported.")
                   .c_str());
         }
 
         responder.ProcessTensor(
-            name, output_dtype, batchn_shape, output_buffer,
-            memory_type, memory_id);
+            name, output_dtype, batchn_shape, output_buffer, memory_type,
+            memory_id);
       } else {
         responder.ProcessBatchOutput(
-          name, *batch_output, output_buffer, memory_type, memory_id);
+            name, *batch_output, output_buffer, memory_type, memory_id);
       }
     } else if (output_tensors[op_index].isList()) {
       // Custom handling for string/bytes tensor...
