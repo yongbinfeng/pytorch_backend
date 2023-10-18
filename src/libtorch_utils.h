@@ -63,4 +63,7 @@ TRITONSERVER_Error* ParseParameter(
     triton::common::TritonJson::Value& params, const std::string& mkey,
     bool* value);
 
+TRITONSERVER_Error* ParseParameterInt(
+    triton::common::TritonJson::Value& params, const std::string& mkey,
+    int* value);
 }}}  // namespace triton::backend::pytorch

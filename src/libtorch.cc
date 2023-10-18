@@ -39,6 +39,10 @@
 #include "triton/common/nvtx.h"
 #include "triton/core/tritonbackend.h"
 
+// for thread control
+#include <ATen/Context.h>
+#include <ATen/Parallel.h>
+
 #ifdef TRITON_PYTORCH_ENABLE_TORCHVISION
 // Suppress warnings in torch headers
 #pragma GCC diagnostic push
@@ -497,6 +501,48 @@ ModelState::ParseParameters()
                                   (enable_nvfuser ? "enabled" : "disabled") +
                                   " for model instance '" + Name() + "'")
                                      .c_str());
+    }
+
+    // intra_op_thread_count
+    int intra_op_thread_count = 0;
+    err = ParseParameterInt(
+        params, "INTRA_OP_THREAD_COUNT", &intra_op_thread_count);
+    if (err != nullptr) {
+      if (TRITONSERVER_ErrorCode(err) != TRITONSERVER_ERROR_NOT_FOUND) {
+        return err;
+      } else {
+        TRITONSERVER_ErrorDelete(err);
+      }
+    } else {
+      if (intra_op_thread_count > 0) {
+        LOG_MESSAGE(
+            TRITONSERVER_LOG_INFO, (std::string("Intra op thread count is ") +
+                                    std::to_string(intra_op_thread_count) +
+                                    " for model instance '" + Name() + "'")
+                                       .c_str());
+        at::set_num_threads(intra_op_thread_count);
+      }
+    }
+
+    // inter_op_thread_count
+    int inter_op_thread_count = 0;
+    err = ParseParameterInt(
+        params, "INTER_OP_THREAD_COUNT", &inter_op_thread_count);
+    if (err != nullptr) {
+      if (TRITONSERVER_ErrorCode(err) != TRITONSERVER_ERROR_NOT_FOUND) {
+        return err;
+      } else {
+        TRITONSERVER_ErrorDelete(err);
+      }
+    } else {
+      if (inter_op_thread_count > 0) {
+        LOG_MESSAGE(
+            TRITONSERVER_LOG_INFO, (std::string("Inter op thread count is ") +
+                                    std::to_string(inter_op_thread_count) +
+                                    " for model instance '" + Name() + "'")
+                                       .c_str());
+        at::set_num_interop_threads(inter_op_thread_count);
+      }
     }
   }
 
