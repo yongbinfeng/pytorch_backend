@@ -192,46 +192,46 @@ if (CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "aarch64")
   )
 else()
   set(LIBS_ARCH "x86_64")
-  set(LIBTORCH_LIBS
-    "libmkl_avx2.so.1"
-    "libmkl_avx512.so.1"
-    "libmkl_core.so.1"
-    "libmkl_def.so.1"
-    "libmkl_gnu_thread.so.1"
-    "libmkl_intel_lp64.so.1"
-    "libmkl_intel_thread.so.1"
-    "libmkl_rt.so.1"
-    "libmkl_sequential.so.1"
-    "libmkl_vml_def.so.1"
-  )
+  #set(LIBTORCH_LIBS
+  #  "libmkl_avx2.so.1"
+  #  "libmkl_avx512.so.1"
+  #  "libmkl_core.so.1"
+  #  "libmkl_def.so.1"
+  #  "libmkl_gnu_thread.so.1"
+  #  "libmkl_intel_lp64.so.1"
+  #  "libmkl_intel_thread.so.1"
+  #  "libmkl_rt.so.1"
+  #  "libmkl_sequential.so.1"
+  #  "libmkl_vml_def.so.1"
+  #)
 endif()
-set(OPENCV_LIBS
-    "libopencv_video.so"
-    "libopencv_videoio.so"
-    "libopencv_highgui.so"
-    "libopencv_imgcodecs.so"
-    "libopencv_imgproc.so"
-    "libopencv_core.so"
-    "libopencv_calib3d.so"
-    "libopencv_flann.so"
-    "libopencv_features2d.so"
-    "libpng16.so"
-    "libjpeg.so"
-)
+#set(OPENCV_LIBS
+#    "libopencv_video.so"
+#    "libopencv_videoio.so"
+#    "libopencv_highgui.so"
+#    "libopencv_imgcodecs.so"
+#    "libopencv_imgproc.so"
+#    "libopencv_core.so"
+#    "libopencv_calib3d.so"
+#    "libopencv_flann.so"
+#    "libopencv_features2d.so"
+#    "libpng16.so"
+#    "libjpeg.so"
+#)
 
 # The patchelf commands ensure the MKL libraries are loaded correctly during runtime
 # Without these, the framework/backend complains of missing libraries / symbols and
 # in some cases leads to segmentation faults.
 if (${TRITON_PYTORCH_DOCKER_BUILD})
-  string(REPLACE ";" " " LIBTORCH_LIBS_STR "${LIBTORCH_LIBS}")
+  #string(REPLACE ";" " " LIBTORCH_LIBS_STR "${LIBTORCH_LIBS}")
   string(RANDOM 8 "abcdefghijklmnopqrstuvwxyz" random_id)
 
   add_custom_command(
     OUTPUT
       ${PT_LIBS}
-      ${LIBTORCH_LIBS}
-      ${OPENCV_LIBS}
-      LICENSE.pytorch
+      #${LIBTORCH_LIBS}
+      #${OPENCV_LIBS}
+      #LICENSE.pytorch
       include/torch
       include/torchvision
     COMMAND ${CMAKE_COMMAND} -E make_directory "include/torchvision"
@@ -269,21 +269,21 @@ if (${TRITON_PYTORCH_DOCKER_BUILD})
     #COMMAND docker cp libjpeg-${random_id}:/tmp/libjpeg.so libjpeg.so
     #COMMAND /bin/sh -c "docker run --name libpng-${random_id} ${TRITON_PYTORCH_DOCKER_IMAGE} find /usr/lib64 /usr/local/lib/python3.12/dist-packages/torchvision.libs/ -name libpng*.so* -type f -exec cp -v {} /tmp/libpng16.so \\; || true"
     #COMMAND docker cp libpng-${random_id}:/tmp/libpng16.so libpng16.so
-    COMMAND /bin/sh -c "if [ -f libmkl_def.so.1 ]; then patchelf --add-needed libmkl_gnu_thread.so.1 libmkl_def.so.1; fi"
-    COMMAND /bin/sh -c "if [ -f libmkl_def.so.1 ]; then patchelf --add-needed libmkl_core.so.1 libmkl_def.so.1; fi"
-    COMMAND /bin/sh -c "if [ -f libmkl_avx2.so.1 ]; then patchelf --add-needed libmkl_gnu_thread.so.1 libmkl_avx2.so.1; fi"
-    COMMAND /bin/sh -c "if [ -f libmkl_avx2.so.1 ]; then patchelf --add-needed libmkl_core.so.1 libmkl_avx2.so.1; fi"
-    COMMAND /bin/sh -c "if [ -f libmkl_avx512.so.1 ]; then patchelf --add-needed libmkl_gnu_thread.so.1 libmkl_avx512.so.1; fi"
-    COMMAND /bin/sh -c "if [ -f libmkl_avx512.so.1 ]; then patchelf --add-needed libmkl_core.so.1 libmkl_avx512.so.1; fi"
-    COMMAND /bin/sh -c "if [ -f libmkl_vml_def.so.1 ]; then patchelf --add-needed libmkl_gnu_thread.so.1 libmkl_vml_def.so.1; fi"
-    COMMAND /bin/sh -c "if [ -f libmkl_vml_def.so.1 ]; then patchelf --add-needed libmkl_intel_thread.so.1 libmkl_vml_def.so.1; fi"
-    COMMAND /bin/sh -c "if [ -f libmkl_vml_def.so.1 ]; then patchelf --add-needed libmkl_core.so.1 libmkl_vml_def.so.1; fi"
-    COMMAND /bin/sh -c "if [ -f libmkl_intel_thread.so.1 ]; then patchelf --add-needed libmkl_intel_lp64.so.1 libmkl_intel_thread.so.1; fi"
+    #COMMAND /bin/sh -c "if [ -f libmkl_def.so.1 ]; then patchelf --add-needed libmkl_gnu_thread.so.1 libmkl_def.so.1; fi"
+    #COMMAND /bin/sh -c "if [ -f libmkl_def.so.1 ]; then patchelf --add-needed libmkl_core.so.1 libmkl_def.so.1; fi"
+    #COMMAND /bin/sh -c "if [ -f libmkl_avx2.so.1 ]; then patchelf --add-needed libmkl_gnu_thread.so.1 libmkl_avx2.so.1; fi"
+    #COMMAND /bin/sh -c "if [ -f libmkl_avx2.so.1 ]; then patchelf --add-needed libmkl_core.so.1 libmkl_avx2.so.1; fi"
+    #COMMAND /bin/sh -c "if [ -f libmkl_avx512.so.1 ]; then patchelf --add-needed libmkl_gnu_thread.so.1 libmkl_avx512.so.1; fi"
+    #COMMAND /bin/sh -c "if [ -f libmkl_avx512.so.1 ]; then patchelf --add-needed libmkl_core.so.1 libmkl_avx512.so.1; fi"
+    #COMMAND /bin/sh -c "if [ -f libmkl_vml_def.so.1 ]; then patchelf --add-needed libmkl_gnu_thread.so.1 libmkl_vml_def.so.1; fi"
+    #COMMAND /bin/sh -c "if [ -f libmkl_vml_def.so.1 ]; then patchelf --add-needed libmkl_intel_thread.so.1 libmkl_vml_def.so.1; fi"
+    #COMMAND /bin/sh -c "if [ -f libmkl_vml_def.so.1 ]; then patchelf --add-needed libmkl_core.so.1 libmkl_vml_def.so.1; fi"
+    #COMMAND /bin/sh -c "if [ -f libmkl_intel_thread.so.1 ]; then patchelf --add-needed libmkl_intel_lp64.so.1 libmkl_intel_thread.so.1; fi"
     COMMAND docker rm pytorch_backend_ptlib
     COMMENT "Extracting pytorch and torchvision libraries and includes from ${TRITON_PYTORCH_DOCKER_IMAGE}"
     VERBATIM
   )
-  add_custom_target(ptlib_target DEPENDS ${PT_LIBS} ${LIBTORCH_LIBS} ${OPENCV_LIBS})
+  add_custom_target(ptlib_target DEPENDS ${PT_LIBS})
   add_library(ptlib SHARED IMPORTED GLOBAL)
   add_dependencies(ptlib ptlib_target)
 
@@ -449,7 +449,7 @@ install(
 
 if (${TRITON_PYTORCH_DOCKER_BUILD})
   set(PT_LIB_PATHS "")
-  FOREACH(plib ${PT_LIBS} ${LIBTORCH_LIBS} ${OPENCV_LIBS})
+  FOREACH(plib ${PT_LIBS})
     set(PT_LIB_PATHS ${PT_LIB_PATHS} "${CMAKE_CURRENT_BINARY_DIR}/${plib}")
   ENDFOREACH(plib)
 
@@ -469,7 +469,7 @@ if (${TRITON_PYTORCH_DOCKER_BUILD})
     )
   endif() # TRITON_PYTORCH_ENABLE_TORCHTRT
 
-  FOREACH(plib ${PT_LIBS} ${LIBTORCH_LIBS} ${OPENCV_LIBS})
+  FOREACH(plib ${PT_LIBS})
     install(
       CODE
         "EXECUTE_PROCESS(
@@ -482,29 +482,29 @@ if (${TRITON_PYTORCH_DOCKER_BUILD})
     )
   ENDFOREACH(plib)
 
-  set(OPENCV_VERSION "406")
-  install(
-    CODE
-      "EXECUTE_PROCESS(
-        COMMAND ln -sf libopencv_video.so libopencv_video.so.${OPENCV_VERSION}
-        COMMAND ln -sf libopencv_videoio.so libopencv_videoio.so.${OPENCV_VERSION}
-        COMMAND ln -sf libopencv_highgui.so libopencv_highgui.so.${OPENCV_VERSION}
-        COMMAND ln -sf libopencv_imgcodecs.so libopencv_imgcodecs.so.${OPENCV_VERSION}
-        COMMAND ln -sf libopencv_imgproc.so libopencv_imgproc.so.${OPENCV_VERSION}
-        COMMAND ln -sf libopencv_core.so libopencv_core.so.${OPENCV_VERSION}
-        COMMAND ln -sf libopencv_calib3d.so libopencv_calib3d.so.${OPENCV_VERSION}
-        COMMAND ln -sf libopencv_features2d.so libopencv_features2d.so.${OPENCV_VERSION}
-        COMMAND ln -sf libopencv_flann.so libopencv_flann.so.${OPENCV_VERSION}
-        COMMAND ln -sf libpng16.so libpng16.so.16
-        COMMAND ln -sf libjpeg.so libjpeg.so.8
-        COMMAND ln -sf libjpeg.so libjpeg.so.62
-        COMMAND ln -sf libcusparseLt.so libcusparseLt.so.0
-        RESULT_VARIABLE LINK_STATUS
-        WORKING_DIRECTORY ${CMAKE_INSTALL_PREFIX}/backends/pytorch)
-      if(LINK_STATUS AND NOT LINK_STATUS EQUAL 0)
-        message(FATAL_ERROR \"FAILED: to create links\")
-      endif()"
-  )
+  #set(OPENCV_VERSION "406")
+  #install(
+  #  CODE
+  #    "EXECUTE_PROCESS(
+  #      COMMAND ln -sf libopencv_video.so libopencv_video.so.${OPENCV_VERSION}
+  #      COMMAND ln -sf libopencv_videoio.so libopencv_videoio.so.${OPENCV_VERSION}
+  #      COMMAND ln -sf libopencv_highgui.so libopencv_highgui.so.${OPENCV_VERSION}
+  #      COMMAND ln -sf libopencv_imgcodecs.so libopencv_imgcodecs.so.${OPENCV_VERSION}
+  #      COMMAND ln -sf libopencv_imgproc.so libopencv_imgproc.so.${OPENCV_VERSION}
+  #      COMMAND ln -sf libopencv_core.so libopencv_core.so.${OPENCV_VERSION}
+  #      COMMAND ln -sf libopencv_calib3d.so libopencv_calib3d.so.${OPENCV_VERSION}
+  #      COMMAND ln -sf libopencv_features2d.so libopencv_features2d.so.${OPENCV_VERSION}
+  #      COMMAND ln -sf libopencv_flann.so libopencv_flann.so.${OPENCV_VERSION}
+  #      COMMAND ln -sf libpng16.so libpng16.so.16
+  #      COMMAND ln -sf libjpeg.so libjpeg.so.8
+  #      COMMAND ln -sf libjpeg.so libjpeg.so.62
+  #      COMMAND ln -sf libcusparseLt.so libcusparseLt.so.0
+  #      RESULT_VARIABLE LINK_STATUS
+  #      WORKING_DIRECTORY ${CMAKE_INSTALL_PREFIX}/backends/pytorch)
+  #    if(LINK_STATUS AND NOT LINK_STATUS EQUAL 0)
+  #      message(FATAL_ERROR \"FAILED: to create links\")
+  #    endif()"
+  #)
 else()
   FOREACH(plib ${PT_LIBS})
     set(PT_LIB_PATHS ${PT_LIB_PATHS} "${TRITON_PYTORCH_LIB_PATHS}/${plib}")
