@@ -49,7 +49,7 @@ option(TRITON_ENABLE_GPU "Enable GPU support in backend" ON)
 option(TRITON_ENABLE_STATS "Include statistics collections in backend" ON)
 option(TRITON_ENABLE_NVTX "Include nvtx markers collection in backend." OFF)
 option(TRITON_PYTORCH_ENABLE_TORCHTRT "Enable TorchTRT support" OFF)
-option(TRITON_PYTORCH_ENABLE_TORCHVISION "Enable Torchvision support" ON)
+option(TRITON_PYTORCH_ENABLE_TORCHVISION "Enable Torchvision support" OFF)
 
 set(TRITON_PYTORCH_DOCKER_IMAGE "" CACHE STRING "Docker image containing the PyTorch build required by backend.")
 set(TRITON_PYTORCH_INCLUDE_PATHS "" CACHE PATH "Paths to Torch includes")
@@ -95,7 +95,8 @@ if(LINUX)
   if(${DISTRO_ID_LIKE} MATCHES "rhel|centos")
     set(RHEL_BUILD ON)
     set(LIB_DIR "lib64")
-    set(PY_INSTALL_PATH "/opt/_internal/cpython-3.12.1/lib/python3.12/site-packages")
+    #set(PY_INSTALL_PATH "/opt/_internal/cpython-3.12.1/lib/python3.12/site-packages")
+    set(PY_INSTALL_PATH "/opt/python/lib/python3.12/site-packages")
     if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "x86_64")
       set(LIBTORCH_LIBS_PATH "/opt/_internal/cpython-3.12.1/lib")
     endif(${CMAKE_SYSTEM_PROCESSOR} MATCHES "x86_64")
@@ -234,10 +235,10 @@ if (${TRITON_PYTORCH_DOCKER_BUILD})
       include/torch
       include/torchvision
     COMMAND ${CMAKE_COMMAND} -E make_directory "include/torchvision"
-    COMMAND docker pull ${TRITON_PYTORCH_DOCKER_IMAGE}
+    #COMMAND docker pull ${TRITON_PYTORCH_DOCKER_IMAGE}
     COMMAND docker rm pytorch_backend_ptlib || echo "error ignored..." || true
     COMMAND docker create --name pytorch_backend_ptlib ${TRITON_PYTORCH_DOCKER_IMAGE}
-    COMMAND /bin/sh -c "for i in ${LIBTORCH_LIBS_STR} ; do echo copying $i && docker cp -L pytorch_backend_ptlib:${LIBTORCH_LIBS_PATH}/$i $i ; done"
+    #COMMAND /bin/sh -c "for i in ${LIBTORCH_LIBS_STR} ; do echo copying $i && docker cp -L pytorch_backend_ptlib:${LIBTORCH_LIBS_PATH}/$i $i ; done"
     COMMAND docker cp pytorch_backend_ptlib:${PY_INSTALL_PATH}/torch/lib/libc10.so libc10.so
     COMMAND docker cp pytorch_backend_ptlib:${PY_INSTALL_PATH}/torch/lib/libc10_cuda.so libc10_cuda.so
     COMMAND docker cp pytorch_backend_ptlib:${PY_INSTALL_PATH}/torch/lib/libtorch.so libtorch.so
@@ -247,27 +248,27 @@ if (${TRITON_PYTORCH_DOCKER_BUILD})
     COMMAND docker cp pytorch_backend_ptlib:${PY_INSTALL_PATH}/torch/lib/libtorch_global_deps.so libtorch_global_deps.so
     COMMAND docker cp pytorch_backend_ptlib:${PY_INSTALL_PATH}/torch/lib/libcaffe2_nvrtc.so libcaffe2_nvrtc.so
     # TODO: Revisit when not needed by making it part of cuda base container.
-    COMMAND docker cp -L pytorch_backend_ptlib:/usr/local/cuda/lib64/libcusparseLt.so libcusparseLt.so;
+    #COMMAND docker cp -L pytorch_backend_ptlib:/usr/local/cuda/lib64/libcusparseLt.so libcusparseLt.so;
     COMMAND /bin/sh -c "if [ ${TRITON_PYTORCH_ENABLE_TORCHVISION} = 'ON' ]; then docker cp pytorch_backend_ptlib:/usr/local/${LIB_DIR}/libtorchvision.so libtorchvision.so; fi"
     COMMAND /bin/sh -c "if [ ${TRITON_PYTORCH_ENABLE_TORCHVISION} = 'ON' ]; then docker cp pytorch_backend_ptlib:/opt/pytorch/vision/torchvision/csrc include/torchvision/torchvision; fi"
     COMMAND /bin/sh -c "if [ ${TRITON_PYTORCH_ENABLE_TORCHTRT} = 'ON' ]; then docker cp pytorch_backend_ptlib:/usr/local/lib/python3.12/dist-packages/torch_tensorrt/lib/libtorchtrt_runtime.so libtorchtrt_runtime.so; fi"
-    COMMAND docker cp pytorch_backend_ptlib:${PY_INSTALL_PATH}/torch_tensorrt/bin/torchtrtc torchtrtc || echo "error ignored..." || true
-    COMMAND docker cp pytorch_backend_ptlib:/opt/pytorch/pytorch/LICENSE LICENSE.pytorch
+    #COMMAND docker cp pytorch_backend_ptlib:${PY_INSTALL_PATH}/torch_tensorrt/bin/torchtrtc torchtrtc || echo "error ignored..." || true
+    #COMMAND docker cp pytorch_backend_ptlib:/opt/pytorch/pytorch/LICENSE LICENSE.pytorch
     COMMAND docker cp pytorch_backend_ptlib:${PY_INSTALL_PATH}/torch/include include/torch
-    COMMAND docker cp pytorch_backend_ptlib:/opt/pytorch/pytorch/torch/csrc/jit/codegen include/torch/torch/csrc/jit/.
-    COMMAND docker cp -L pytorch_backend_ptlib:/usr/local/${LIB_DIR}/libopencv_videoio.so libopencv_videoio.so
-    COMMAND docker cp -L pytorch_backend_ptlib:/usr/local/${LIB_DIR}/libopencv_highgui.so libopencv_highgui.so
-    COMMAND docker cp -L pytorch_backend_ptlib:/usr/local/${LIB_DIR}/libopencv_video.so libopencv_video.so
-    COMMAND docker cp -L pytorch_backend_ptlib:/usr/local/${LIB_DIR}/libopencv_imgcodecs.so libopencv_imgcodecs.so
-    COMMAND docker cp -L pytorch_backend_ptlib:/usr/local/${LIB_DIR}/libopencv_imgproc.so libopencv_imgproc.so
-    COMMAND docker cp -L pytorch_backend_ptlib:/usr/local/${LIB_DIR}/libopencv_core.so libopencv_core.so
-    COMMAND docker cp -L pytorch_backend_ptlib:/usr/local/${LIB_DIR}/libopencv_calib3d.so libopencv_calib3d.so
-    COMMAND docker cp -L pytorch_backend_ptlib:/usr/local/${LIB_DIR}/libopencv_features2d.so libopencv_features2d.so
-    COMMAND docker cp -L pytorch_backend_ptlib:/usr/local/${LIB_DIR}/libopencv_flann.so libopencv_flann.so
-    COMMAND /bin/sh -c "docker run --name libjpeg-${random_id} ${TRITON_PYTORCH_DOCKER_IMAGE} find /usr/lib64 /usr/local/lib/python3.12/dist-packages/torchvision.libs/ -name libjpeg*.so* -type f -exec cp -v {} /tmp/libjpeg.so \\; || true"
-    COMMAND docker cp libjpeg-${random_id}:/tmp/libjpeg.so libjpeg.so
-    COMMAND /bin/sh -c "docker run --name libpng-${random_id} ${TRITON_PYTORCH_DOCKER_IMAGE} find /usr/lib64 /usr/local/lib/python3.12/dist-packages/torchvision.libs/ -name libpng*.so* -type f -exec cp -v {} /tmp/libpng16.so \\; || true"
-    COMMAND docker cp libpng-${random_id}:/tmp/libpng16.so libpng16.so
+    COMMAND docker cp pytorch_backend_ptlib:/opt/python/lib/python3.12/site-packages/torch/include/torch/csrc/jit/codegen include/torch/torch/csrc/jit/.
+    #COMMAND docker cp -L pytorch_backend_ptlib:/usr/local/${LIB_DIR}/libopencv_videoio.so libopencv_videoio.so
+    #COMMAND docker cp -L pytorch_backend_ptlib:/usr/local/${LIB_DIR}/libopencv_highgui.so libopencv_highgui.so
+    #COMMAND docker cp -L pytorch_backend_ptlib:/usr/local/${LIB_DIR}/libopencv_video.so libopencv_video.so
+    #COMMAND docker cp -L pytorch_backend_ptlib:/usr/local/${LIB_DIR}/libopencv_imgcodecs.so libopencv_imgcodecs.so
+    #COMMAND docker cp -L pytorch_backend_ptlib:/usr/local/${LIB_DIR}/libopencv_imgproc.so libopencv_imgproc.so
+    #COMMAND docker cp -L pytorch_backend_ptlib:/usr/local/${LIB_DIR}/libopencv_core.so libopencv_core.so
+    #COMMAND docker cp -L pytorch_backend_ptlib:/usr/local/${LIB_DIR}/libopencv_calib3d.so libopencv_calib3d.so
+    #COMMAND docker cp -L pytorch_backend_ptlib:/usr/local/${LIB_DIR}/libopencv_features2d.so libopencv_features2d.so
+    #COMMAND docker cp -L pytorch_backend_ptlib:/usr/local/${LIB_DIR}/libopencv_flann.so libopencv_flann.so
+    #COMMAND /bin/sh -c "docker run --name libjpeg-${random_id} ${TRITON_PYTORCH_DOCKER_IMAGE} find /usr/lib64 /usr/local/lib/python3.12/dist-packages/torchvision.libs/ -name libjpeg*.so* -type f -exec cp -v {} /tmp/libjpeg.so \\; || true"
+    #COMMAND docker cp libjpeg-${random_id}:/tmp/libjpeg.so libjpeg.so
+    #COMMAND /bin/sh -c "docker run --name libpng-${random_id} ${TRITON_PYTORCH_DOCKER_IMAGE} find /usr/lib64 /usr/local/lib/python3.12/dist-packages/torchvision.libs/ -name libpng*.so* -type f -exec cp -v {} /tmp/libpng16.so \\; || true"
+    #COMMAND docker cp libpng-${random_id}:/tmp/libpng16.so libpng16.so
     COMMAND /bin/sh -c "if [ -f libmkl_def.so.1 ]; then patchelf --add-needed libmkl_gnu_thread.so.1 libmkl_def.so.1; fi"
     COMMAND /bin/sh -c "if [ -f libmkl_def.so.1 ]; then patchelf --add-needed libmkl_core.so.1 libmkl_def.so.1; fi"
     COMMAND /bin/sh -c "if [ -f libmkl_avx2.so.1 ]; then patchelf --add-needed libmkl_gnu_thread.so.1 libmkl_avx2.so.1; fi"
@@ -455,8 +456,8 @@ if (${TRITON_PYTORCH_DOCKER_BUILD})
   install(
     FILES
       ${PT_LIB_PATHS}
-      ${CMAKE_CURRENT_BINARY_DIR}/libcusparseLt.so
-      ${CMAKE_CURRENT_BINARY_DIR}/LICENSE.pytorch
+      #${CMAKE_CURRENT_BINARY_DIR}/libcusparseLt.so
+      #${CMAKE_CURRENT_BINARY_DIR}/LICENSE.pytorch
     DESTINATION ${CMAKE_INSTALL_PREFIX}/backends/pytorch
   )
 
