@@ -154,6 +154,7 @@ configure_file(src/libtriton_pytorch.ldscript libtriton_pytorch.ldscript COPYONL
 set(PT_LIBS
     "libc10.so"
     "libc10_cuda.so"
+    "libgomp-24e2ab19.so.1"
     "libtorch.so"
     "libtorch_cpu.so"
     "libtorch_cuda.so"
@@ -241,6 +242,7 @@ if (${TRITON_PYTORCH_DOCKER_BUILD})
     #COMMAND /bin/sh -c "for i in ${LIBTORCH_LIBS_STR} ; do echo copying $i && docker cp -L pytorch_backend_ptlib:${LIBTORCH_LIBS_PATH}/$i $i ; done"
     COMMAND docker cp pytorch_backend_ptlib:${PY_INSTALL_PATH}/torch/lib/libc10.so libc10.so
     COMMAND docker cp pytorch_backend_ptlib:${PY_INSTALL_PATH}/torch/lib/libc10_cuda.so libc10_cuda.so
+    COMMAND docker cp pytorch_backend_ptlib:${PY_INSTALL_PATH}/torch/lib/libgomp-24e2ab19.so.1 libgomp-24e2ab19.so.1
     COMMAND docker cp pytorch_backend_ptlib:${PY_INSTALL_PATH}/torch/lib/libtorch.so libtorch.so
     COMMAND docker cp pytorch_backend_ptlib:${PY_INSTALL_PATH}/torch/lib/libtorch_cpu.so libtorch_cpu.so
     COMMAND docker cp pytorch_backend_ptlib:${PY_INSTALL_PATH}/torch/lib/libtorch_cuda.so libtorch_cuda.so
