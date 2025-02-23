@@ -255,7 +255,7 @@ if (${TRITON_PYTORCH_DOCKER_BUILD})
     #COMMAND docker cp pytorch_backend_ptlib:${PY_INSTALL_PATH}/torch_tensorrt/bin/torchtrtc torchtrtc || echo "error ignored..." || true
     #COMMAND docker cp pytorch_backend_ptlib:/opt/pytorch/pytorch/LICENSE LICENSE.pytorch
     COMMAND docker cp pytorch_backend_ptlib:${PY_INSTALL_PATH}/torch/include include/torch
-    COMMAND docker cp pytorch_backend_ptlib:/opt/python/lib/python3.12/site-packages/torch/include/torch/csrc/jit/codegen include/torch/torch/csrc/jit/.
+    #COMMAND docker cp pytorch_backend_ptlib:/opt/python/lib/python3.12/site-packages/torch/include/torch/csrc/jit/codegen include/torch/torch/csrc/jit/.
     #COMMAND docker cp -L pytorch_backend_ptlib:/usr/local/${LIB_DIR}/libopencv_videoio.so libopencv_videoio.so
     #COMMAND docker cp -L pytorch_backend_ptlib:/usr/local/${LIB_DIR}/libopencv_highgui.so libopencv_highgui.so
     #COMMAND docker cp -L pytorch_backend_ptlib:/usr/local/${LIB_DIR}/libopencv_video.so libopencv_video.so
