@@ -218,19 +218,25 @@ configure_file(src/libtriton_pytorch.ldscript libtriton_pytorch.ldscript COPYONL
 
 set(PT_LIBS
     "libc10.so"
-    "libc10_cuda.so"
     "libtorch.so"
     "libtorch_cpu.so"
-    "libtorch_cuda.so"
-    "libtorch_cuda_linalg.so"
     "libtorch_global_deps.so"
     "libjpeg.so.62"
     "libshm.so"
     "libbackend_with_compiler.so"
     "libaoti_custom_ops.so"
     "libtorch_python.so"
-    "libcaffe2_nvrtc.so"
 )
+# CUDA-only libraries are packaged only for GPU builds.
+if (${TRITON_ENABLE_GPU})
+  set(PT_LIBS
+      ${PT_LIBS}
+      "libc10_cuda.so"
+      "libtorch_cuda.so"
+      "libtorch_cuda_linalg.so"
+      "libcaffe2_nvrtc.so"
+  )
+endif() # TRITON_ENABLE_GPU
 
 if (${TRITON_PYTORCH_NVSHMEM})
   set(PT_LIBS
@@ -272,18 +278,8 @@ if (CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "aarch64")
   )
 else()
   set(LIBS_ARCH "x86_64")
-  set(LIBTORCH_LIBS
-    "libmkl_avx2.so.1"
-    "libmkl_avx512.so.1"
-    "libmkl_core.so.1"
-    "libmkl_def.so.1"
-    "libmkl_gnu_thread.so.1"
-    "libmkl_intel_lp64.so.1"
-    "libmkl_intel_thread.so.1"
-    "libmkl_rt.so.1"
-    "libmkl_sequential.so.1"
-    "libmkl_vml_def.so.1"
-  )
+  # PyPI torch wheels bundle their own BLAS; no separate MKL redistributables.
+  set(LIBTORCH_LIBS "")
 endif()
 set(TORCHVISION_LIBS
     libjpeg.so.62
@@ -309,18 +305,18 @@ if (${TRITON_PYTORCH_DOCKER_BUILD})
       include/torch
       include/torchvision
     COMMAND ${CMAKE_COMMAND} -E make_directory "include/torchvision"
-    COMMAND docker pull ${TRITON_PYTORCH_DOCKER_IMAGE}
+    COMMAND /bin/sh -c "docker pull ${TRITON_PYTORCH_DOCKER_IMAGE} || true"
     COMMAND docker rm pytorch_backend_ptlib || echo "error ignored..." || true
     COMMAND docker create --name pytorch_backend_ptlib ${TRITON_PYTORCH_DOCKER_IMAGE}
     COMMAND /bin/sh -c "for i in ${LIBTORCH_LIBS_STR} ; do echo copying $i && docker cp -L pytorch_backend_ptlib:${LIBTORCH_LIBS_PATH}/$i $i ; done"
     COMMAND docker cp pytorch_backend_ptlib:${PY_INSTALL_PATH}/torch/lib/libc10.so libc10.so
-    COMMAND docker cp pytorch_backend_ptlib:${PY_INSTALL_PATH}/torch/lib/libc10_cuda.so libc10_cuda.so
+    COMMAND /bin/sh -c "if [ ${TRITON_ENABLE_GPU} = 'ON' ]; then docker cp pytorch_backend_ptlib:${PY_INSTALL_PATH}/torch/lib/libc10_cuda.so libc10_cuda.so; fi"
     COMMAND docker cp pytorch_backend_ptlib:${PY_INSTALL_PATH}/torch/lib/libtorch.so libtorch.so
     COMMAND docker cp pytorch_backend_ptlib:${PY_INSTALL_PATH}/torch/lib/libtorch_cpu.so libtorch_cpu.so
-    COMMAND docker cp pytorch_backend_ptlib:${PY_INSTALL_PATH}/torch/lib/libtorch_cuda.so libtorch_cuda.so
-    COMMAND docker cp pytorch_backend_ptlib:${PY_INSTALL_PATH}/torch/lib/libtorch_cuda_linalg.so libtorch_cuda_linalg.so
+    COMMAND /bin/sh -c "if [ ${TRITON_ENABLE_GPU} = 'ON' ]; then docker cp pytorch_backend_ptlib:${PY_INSTALL_PATH}/torch/lib/libtorch_cuda.so libtorch_cuda.so; fi"
+    COMMAND /bin/sh -c "if [ ${TRITON_ENABLE_GPU} = 'ON' ]; then docker cp pytorch_backend_ptlib:${PY_INSTALL_PATH}/torch/lib/libtorch_cuda_linalg.so libtorch_cuda_linalg.so; fi"
     COMMAND docker cp pytorch_backend_ptlib:${PY_INSTALL_PATH}/torch/lib/libtorch_global_deps.so libtorch_global_deps.so
-    COMMAND docker cp pytorch_backend_ptlib:${PY_INSTALL_PATH}/torch/lib/libcaffe2_nvrtc.so libcaffe2_nvrtc.so
+    COMMAND /bin/sh -c "if [ ${TRITON_ENABLE_GPU} = 'ON' ]; then docker cp pytorch_backend_ptlib:${PY_INSTALL_PATH}/torch/lib/libcaffe2_nvrtc.so libcaffe2_nvrtc.so; fi"
     COMMAND docker cp pytorch_backend_ptlib:${PY_INSTALL_PATH}/torch/lib/libshm.so libshm.so
     COMMAND docker cp pytorch_backend_ptlib:${PY_INSTALL_PATH}/torch/lib/libbackend_with_compiler.so libbackend_with_compiler.so
     COMMAND docker cp pytorch_backend_ptlib:${PY_INSTALL_PATH}/torch/lib/libaoti_custom_ops.so libaoti_custom_ops.so
