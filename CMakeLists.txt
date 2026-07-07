@@ -558,6 +558,24 @@ if (${TRITON_PYTORCH_DOCKER_BUILD})
     )
   ENDFOREACH(plib)
 
+  # For GPU builds from a PyPI cuXYZ wheel, torch bundles its own CUDA runtime
+  # libraries (libcudart, libcublas, libcudnn, ...). The provider image flattens
+  # them into torch/lib; copy the whole set into the backend dir and rpath every
+  # library to $ORIGIN so libtorch_cuda.so finds them beside itself at runtime
+  # (the base image CUDA is not guaranteed to match the wheel's CUDA version).
+  if (${TRITON_ENABLE_GPU})
+    install(CODE
+      "execute_process(COMMAND docker rm -f pytorch_backend_cudalibs ERROR_QUIET)
+       execute_process(COMMAND docker create --name pytorch_backend_cudalibs ${TRITON_PYTORCH_DOCKER_IMAGE} COMMAND_ERROR_IS_FATAL ANY)
+       execute_process(COMMAND sh -c \"docker cp pytorch_backend_cudalibs:${PY_INSTALL_PATH}/torch/lib/. '${CMAKE_INSTALL_PREFIX}/backends/pytorch/'\" COMMAND_ERROR_IS_FATAL ANY)
+       execute_process(COMMAND docker rm -f pytorch_backend_cudalibs ERROR_QUIET)
+       file(GLOB _pt_sos \"${CMAKE_INSTALL_PREFIX}/backends/pytorch/*.so*\")
+       foreach(_so \${_pt_sos})
+         execute_process(COMMAND patchelf --set-rpath \$ORIGIN \${_so})
+       endforeach()"
+    )
+  endif() # TRITON_ENABLE_GPU
+
 else()
   FOREACH(plib ${PT_LIBS})
     set(PT_LIB_PATHS ${PT_LIB_PATHS} "${TRITON_PYTORCH_LIB_PATHS}/${plib}")
