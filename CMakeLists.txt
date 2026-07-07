@@ -223,8 +223,6 @@ set(PT_LIBS
     "libtorch_global_deps.so"
     "libjpeg.so.62"
     "libshm.so"
-    "libbackend_with_compiler.so"
-    "libaoti_custom_ops.so"
     "libtorch_python.so"
 )
 # CUDA-only libraries are packaged only for GPU builds.
@@ -318,8 +316,8 @@ if (${TRITON_PYTORCH_DOCKER_BUILD})
     COMMAND docker cp pytorch_backend_ptlib:${PY_INSTALL_PATH}/torch/lib/libtorch_global_deps.so libtorch_global_deps.so
     COMMAND /bin/sh -c "if [ ${TRITON_ENABLE_GPU} = 'ON' ]; then docker cp pytorch_backend_ptlib:${PY_INSTALL_PATH}/torch/lib/libcaffe2_nvrtc.so libcaffe2_nvrtc.so; fi"
     COMMAND docker cp pytorch_backend_ptlib:${PY_INSTALL_PATH}/torch/lib/libshm.so libshm.so
-    COMMAND docker cp pytorch_backend_ptlib:${PY_INSTALL_PATH}/torch/lib/libbackend_with_compiler.so libbackend_with_compiler.so
-    COMMAND docker cp pytorch_backend_ptlib:${PY_INSTALL_PATH}/torch/lib/libaoti_custom_ops.so libaoti_custom_ops.so
+    COMMAND /bin/sh -c "docker cp pytorch_backend_ptlib:${PY_INSTALL_PATH}/torch/lib/libbackend_with_compiler.so libbackend_with_compiler.so || echo 'optional libbackend_with_compiler.so not present in this torch version'"
+    COMMAND /bin/sh -c "docker cp pytorch_backend_ptlib:${PY_INSTALL_PATH}/torch/lib/libaoti_custom_ops.so libaoti_custom_ops.so || echo 'optional libaoti_custom_ops.so not present in this torch version'"
     COMMAND docker cp pytorch_backend_ptlib:${PY_INSTALL_PATH}/torch/lib/libtorch_python.so libtorch_python.so
     COMMAND /bin/sh -c "if [ ${TRITON_PYTORCH_NVSHMEM} = 'ON' ]; then docker cp pytorch_backend_ptlib:${PY_INSTALL_PATH}/torch/lib/libtorch_nvshmem.so libtorch_nvshmem.so; fi"
     COMMAND /bin/sh -c "if [ ${TRITON_PYTORCH_ENABLE_TORCHVISION} = 'ON' ]; then docker cp -a -L pytorch_backend_ptlib:/usr/local/${LIB_DIR}/libtorchvision.so.1 libtorchvision.so.1; fi;"
